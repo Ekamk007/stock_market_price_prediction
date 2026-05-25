@@ -148,7 +148,51 @@ def run_simple_prediction(df: pd.DataFrame):
     mape = np.mean(np.abs((actual_prices - pred_prices) / actual_prices)) * 100
 
     return test_dates, actual_prices, pred_prices, rmse, mae, mape
+    
+def predict_future_prices(df: pd.DataFrame, days: int = 5):
+    from sklearn.linear_model import Ridge
 
+    feat_df = add_features(df)
+
+    data = feat_df[["Close", "MA_30", "Volatility"]].values
+
+    scaler = MinMaxScaler()
+    scaled = scaler.fit_transform(data)
+
+    X, y = create_sequences(scaled, WINDOW_SIZE)
+
+    X = X.reshape(len(X), -1)
+
+    model = Ridge(alpha=1.0)
+    model.fit(X, y)
+
+    # Last sequence
+    last_seq = scaled[-WINDOW_SIZE:]
+
+    future_prices = []
+
+    current_seq = last_seq.copy()
+
+    for _ in range(days):
+        x_input = current_seq.reshape(1, -1)
+
+        pred_scaled = model.predict(x_input)[0]
+
+        dummy = np.zeros((1, 3))
+        dummy[0, 0] = pred_scaled
+
+        pred_price = scaler.inverse_transform(dummy)[0, 0]
+
+        future_prices.append(pred_price)
+
+        # Create next row
+        next_row = current_seq[-1].copy()
+        next_row[0] = pred_scaled
+
+        # Roll window
+        current_seq = np.vstack([current_seq[1:], next_row])
+
+    return future_prices
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
@@ -196,6 +240,11 @@ if df.empty:
 # Run prediction
 with st.spinner("Running prediction model…"):
     test_dates, actual_prices, pred_prices, rmse, mae, mape = run_simple_prediction(df)
+    future_prices = predict_future_prices(df, days=5)
+    future_dates = pd.bdate_range(
+    start=df.index[-1] + pd.Timedelta(days=1),
+    periods=5
+)
 
 # ── KPI Row ───────────────────────────────────────────────────────────────────
 k1, k2, k3, k4, k5 = st.columns(5)
@@ -234,7 +283,12 @@ with k5:
 st.markdown("---")
 
 # ── Main Chart ────────────────────────────────────────────────────────────────
-tab1, tab2, tab3 = st.tabs(["📊 Predicted vs Actual", "📉 Full History & Indicators", "📋 Metrics Table"])
+tab1, tab2, tab3, tab4 = st.tabs([
+    "📊 Predicted vs Actual",
+    "📉 Full History & Indicators",
+    "📋 Metrics Table",
+    "🔮 Future Forecast"
+])
 
 with tab1:
     st.markdown('<div class="section-header">Predicted vs Actual Close Price (Test Period)</div>',
@@ -333,6 +387,40 @@ with tab3:
     # Download button
     csv = compare_df.to_csv(index=False).encode("utf-8")
     st.download_button("⬇️ Download CSV", csv, "comparison.csv", "text/csv")
+with tab4:
+    st.markdown(
+        '<div class="section-header">5-Day Future Price Forecast</div>',
+        unsafe_allow_html=True
+    )
+
+    forecast_df = pd.DataFrame({
+        "Date": future_dates.strftime("%Y-%m-%d"),
+        "Predicted Price": np.round(future_prices, 2)
+    })
+
+    st.dataframe(forecast_df, use_container_width=True, hide_index=True)
+
+    # Forecast chart
+    fig4 = go.Figure()
+
+    fig4.add_trace(go.Scatter(
+        x=future_dates,
+        y=future_prices,
+        mode="lines+markers",
+        name="Forecast",
+        line=dict(color="#68d391", width=3),
+        marker=dict(size=8)
+    ))
+
+    fig4.update_layout(
+        template="plotly_dark",
+        height=400,
+        xaxis_title="Future Date",
+        yaxis_title="Predicted Price",
+        margin=dict(l=0, r=0, t=20, b=0)
+    )
+
+    st.plotly_chart(fig4, use_container_width=True)
 
 # ── Footer ─────────────────────────────────────────────────────────────────────
 st.markdown("---")
