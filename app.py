@@ -329,9 +329,7 @@ with tab3:
         color = "#48bb78" if abs(val) < 2 else ("#f6ad55" if abs(val) < 5 else "#fc8181")
         return f"color: {color}"
 
-    styled = compare_df.style.applymap(color_error, subset=["Error %"])
-    st.dataframe(styled, use_container_width=True, hide_index=True)
-
+    st.dataframe(compare_df, use_container_width=True, hide_index=True)
     # Download button
     csv = compare_df.to_csv(index=False).encode("utf-8")
     st.download_button("⬇️ Download CSV", csv, "comparison.csv", "text/csv")
