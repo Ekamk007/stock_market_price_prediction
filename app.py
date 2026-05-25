@@ -66,10 +66,14 @@ TRAIN_SPLIT = 0.80   # 80% train, 20% test
 @st.cache_data(ttl=300, show_spinner=False)
 def load_stock_data(ticker: str, period: str = "3y") -> pd.DataFrame:
     df = yf.download(ticker, period=period, auto_adjust=True, progress=False)
+
+    if isinstance(df.columns, pd.MultiIndex):
+        df.columns = df.columns.get_level_values(0)
+
     df = df[["Close"]].dropna()
     df.index = pd.to_datetime(df.index)
-    return df
 
+    return df
 
 @st.cache_data(ttl=60, show_spinner=False)
 def get_live_price(ticker: str) -> float:
@@ -198,10 +202,23 @@ k1, k2, k3, k4, k5 = st.columns(5)
 
 last_actual = actual_prices[-1]
 last_pred = pred_prices[-1]
-error_pct = abs(last_actual - last_pred) / last_actual * 100
-prev_close = float(df["Close"].iloc[-2]) if len(df) > 1 else last_actual
-live_chg = ((live_price - prev_close) / prev_close * 100) if not np.isnan(live_price) else 0
 
+error_pct = abs(last_actual - last_pred) / last_actual * 100
+
+# Safe close-price extraction
+close_series = pd.to_numeric(df["Close"], errors="coerce").dropna()
+
+if len(close_series) > 1:
+    prev_close = float(close_series.iloc[-2])
+else:
+    prev_close = float(last_actual)
+
+# Live % change
+if not np.isnan(live_price) and prev_close != 0:
+    live_chg = ((live_price - prev_close) / prev_close) * 100
+else:
+    live_chg = 0
+    
 with k1:
     st.metric("Live Price", f"₹{live_price:,.2f}" if ".NS" in ticker else f"${live_price:,.2f}",
               f"{live_chg:+.2f}%")
