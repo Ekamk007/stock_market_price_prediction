@@ -58,7 +58,7 @@ STOCKS = {
     "Abbott India": "ABBOTINDIA.NS",
 }
 
-WINDOW_SIZE = 60
+WINDOW_SIZE = 30
 TRAIN_SPLIT = 0.80   # 80% train, 20% test
 
 
