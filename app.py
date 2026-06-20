@@ -109,7 +109,7 @@ def run_simple_prediction(df: pd.DataFrame):
     so the app runs without GPU / TensorFlow in a pure Streamlit env.
     For the real LSTM / GRU results, see the accompanying notebook.
     """
-    from sklearn.linear_model import Ridge
+    from sklearn.linear_model import LinearRegression
 
     feat_df = add_features(df)
     data = feat_df[["Close", "MA_30", "Volatility"]].values
