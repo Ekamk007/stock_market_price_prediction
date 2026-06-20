@@ -127,7 +127,7 @@ def run_simple_prediction(df: pd.DataFrame):
     X_tr = X_train.reshape(len(X_train), -1)
     X_te = X_test.reshape(len(X_test), -1)
 
-    model = Ridge(alpha=1.0)
+    model = LinearRegression()
     model.fit(X_tr, y_train)
 
     preds_scaled = model.predict(X_te)
