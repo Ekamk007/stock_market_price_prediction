@@ -104,11 +104,6 @@ def create_sequences(data: np.ndarray, window: int = 60):
 
 # ── Model Training (LSTM-style via numpy – no TF dependency for Streamlit) ────
 def run_simple_prediction(df: pd.DataFrame):
-    """
-    Uses a rolling-window linear regression as a lightweight predictor
-    so the app runs without GPU / TensorFlow in a pure Streamlit env.
-    For the real LSTM / GRU results, see the accompanying notebook.
-    """
     from sklearn.linear_model import Ridge
 
     feat_df = add_features(df)
